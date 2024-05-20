@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CSV Visualizer</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>Upload CSV File</h1>
+    <form id="upload-form" enctype="multipart/form-data">
+        <input type="file" name="file" id="file" accept=".csv">
+        <button type="submit">Upload</button>
+    </form>
+    <div id="selectors" style="display: none;">
+        <h2>Select Columns to Plot</h2>
+        <label for="x-axis">X-axis:</label>
+        <select id="x-axis"></select>
+        <label for="y-axis">Y-axis:</label>
+        <select id="y-axis"></select>
+        <button id="plot-button">Plot</button>
+    </div>
+    <div id="graph"></div>
+    <script>
+        document.getElementById('upload-form').onsubmit = async function(event) {
+            event.preventDefault();
+            let formData = new FormData();
+            formData.append('file', document.getElementById('file').files[0]);
+
+            let response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                let columns = await response.json();
+                let xSelect = document.getElementById('x-axis');
+                let ySelect = document.getElementById('y-axis');
+                xSelect.innerHTML = '';
+                ySelect.innerHTML = '';
+                columns.forEach(column => {
+                    let optionX = document.createElement('option');
+                    optionX.value = column;
+                    optionX.text = column;
+                    xSelect.appendChild(optionX);
+
+                    let optionY = document.createElement('option');
+                    optionY.value = column;
+                    optionY.text = column;
+                    ySelect.appendChild(optionY);
+                });
+                document.getElementById('selectors').style.display = 'block';
+            } else {
+                alert("File upload failed.");
+            }
+        };
+
+        document.getElementById('plot-button').onclick = async function() {
+            let x = document.getElementById('x-axis').value;
+            let y = document.getElementById('y-axis').value;
+
+            let response = await fetch('/plot', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ x: x, y: y })
+            });
+
+            if (response.ok) {
+                let graphJSON = await response.json();
+                let graphDiv = document.getElementById('graph');
+                Plotly.newPlot(graphDiv, graphJSON.data, graphJSON.layout);
+            } else {
+                alert("Plotting failed.");
+            }
+        };
+    </script>
+</body>
+</html>
